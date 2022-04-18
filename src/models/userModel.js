@@ -1,7 +1,7 @@
 const Sequelize = require('sequelize');
-const sequelize = require('../config/db');
+const db = require("../config/db")
 
-const User = sequelize.define('user', {
+const User = db.define('user', {
   id: {
     type: Sequelize.INTEGER,
     autoIncrement: true,
@@ -22,7 +22,7 @@ const User = sequelize.define('user', {
     unique: true,
     isEmail: true
   },
-  hashedPassword: {
+  password: {
     type: Sequelize.STRING,
     allowNull: false,
     // validate: {

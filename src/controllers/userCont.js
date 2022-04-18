@@ -1,29 +1,16 @@
-const User = require('./models/userModel');
+const express = require("express");
+const User = require("../models/userModel");
 
-const addUser = async (userData) => {
-  return User.create({
-    firstName: userData.firstName,
-    lastName: userData.lastName,
-    email: userData.email,
-    hashedPassword: userData.password,
-  });
-};
+const router = express.Router();
 
-module.exports = addUser;
+router.post("/addUser", async(req, res) =>{
+  try {
+    const reqUser = req.body;
+    const user = await User.create({firstName: reqUser.firstName, lastName: reqUser.lastName, email: reqUser.email, password: reqUser.password  })
+    res.send(user)
+  } catch (error) {
+    console.log("error: " , error);
+  }
+})
 
-// sequelize
-//   .sync()
-//   .then((res) => {
-//     return User.create({
-//       firstName: 'siddesh',
-//       lastName: 'patil',
-//       email: 'sid@gmail.com',
-//       hashedPassword: 'Siddesh',
-//     });
-//   })
-//   .then((user) => {
-//     console.log('user', user);
-//   })
-//   .catch((err) => {
-//     console.log(err);
-//   });
+module.exports = router;
