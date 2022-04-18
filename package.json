@@ -18,15 +18,13 @@
   },
   "homepage": "https://github.com/Coolasid/weekend-project#readme",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
     "express": "^4.17.3",
     "nodemon": "^2.0.15",
-    "pg": "^8.7.3",
-    "pg-hstore": "^2.3.4",
-    "sequelize": "^6.19.0",
-    "winston": "^3.7.2"
+    "sequelize": "^6.19.0"
   }
 }
