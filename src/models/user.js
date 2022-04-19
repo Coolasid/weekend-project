@@ -27,6 +27,11 @@ const User = db.define('user', {
     type: Sequelize.STRING,
     allowNull: false,
   },
+  isVarified: {
+    type: Sequelize.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  }
 });
 
 User.beforeCreate((user) => {
