@@ -1,11 +1,29 @@
 const express = require('express');
 const userRouter = express.Router();
-const { addUser, deleteUser } = require('../controllers/userController');
+const {
+  addUser,
+  deleteUser,
+  getAllUsers,
+} = require('../controllers/userController');
+const sendMail = require('../utils/sendEmail');
 
 userRouter.route('/addUser').post(async (req, res) => {
   try {
     const user = await addUser(req.body);
-    res.send(user).status(201);
+
+    //sending email to verify user
+    sendMail(req.body.email);
+
+    res.status(201).send(user);
+  } catch (error) {
+    throw error;
+  }
+});
+
+userRouter.route('/getAllUsers').get(async (req, res) => {
+  try {
+    const users = await getAllUsers();
+    res.status(200).send(users);
   } catch (error) {
     throw error;
   }
@@ -20,7 +38,7 @@ userRouter.route('/deleteUser/:id').delete(async (req, res) => {
         message: 'user deleted',
       });
     } else {
-      res.json({
+      return res.json({
         message: 'please provide ID',
       });
     }
