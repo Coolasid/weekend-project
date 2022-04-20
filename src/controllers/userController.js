@@ -22,13 +22,18 @@ const findOneUser = async (id) => {
 };
 
 const updateStatusOfUser = async (id) => {
-  return User.update({ isVarified: true }, { where: { id: id } });
+  return User.update({ isVerified: true }, { where: { id: id } });
 };
+
+const findByEmail = async (email) =>{
+  return User.findOne({where: {email: email}})
+}
 
 module.exports = {
   addUser,
   getAllUsers,
   deleteUser,
   findOneUser,
-  updateStatusOfUser
+  updateStatusOfUser,
+  findByEmail
 };

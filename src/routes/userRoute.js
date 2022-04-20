@@ -1,21 +1,21 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const userRouter = express.Router();
 const {
   addUser,
   deleteUser,
   getAllUsers,
   findOneUser,
-  updateStatusOfUser
+  updateStatusOfUser,
+  findByEmail,
 } = require('../controllers/userController');
 const sendMail = require('../utils/sendEmail');
-const {newToken, verifyToken} = require('../utils/jwt');
-
-
+const { newToken, verifyToken } = require('../utils/jwt');
 
 userRouter.route('/addUser').post(async (req, res) => {
   try {
     const user = await addUser(req.body);
-    
+
     //creating token
     var token = newToken(user);
 
@@ -55,13 +55,11 @@ userRouter.route('/deleteUser/:id').delete(async (req, res) => {
   }
 });
 
-
 //verify the user
-userRouter.route('/verifyUser/:token').get( async(req, res)=>{
+userRouter.route('/verifyUser/:token').get(async (req, res) => {
+  const tokenGotfromAPI = req.params.token;
 
-  const tokenGotfromAPI = req.params.token
-
-  if(tokenGotfromAPI){
+  if (tokenGotfromAPI) {
     try {
       var user = await verifyToken(tokenGotfromAPI);
       const userInDB = await findOneUser(user.user.id);
@@ -69,25 +67,56 @@ userRouter.route('/verifyUser/:token').get( async(req, res)=>{
       // console.log(user);
       // console.log("-------------------------------");
       // console.log(userInDB);
-      
+
       //updating status of user
-     await updateStatusOfUser(userInDB.id);
+      await updateStatusOfUser(userInDB.id);
 
-     return res.send({ message: 'user verification completed' });
-
+      return res.send({ message: 'user verification completed' });
     } catch (error) {
       res.send({
-        message: "Invalid token"
-      })
+        message: 'Invalid token',
+      });
     }
-  }else{
+  } else {
     res.send({
-      message: "invalid link"
-    })
+      message: 'invalid link',
+    });
   }
+});
 
+//login route
+userRouter.route('/userLogin').post(async (req, res) => {
+  const email = req.body.email;
 
+  const user = await findByEmail(email);
 
+  // console.log(user.dataValues.id);
+
+  if (user) {
+    if (user.dataValues.isVerified) {
+      let passwordFromAPI = req.body.password;
+      let hashedPasswordInDB = user.dataValues.password;
+
+      //checking password
+      let originalPass = () => {
+        return bcrypt.compareSync(passwordFromAPI, hashedPasswordInDB);
+      };
+
+      if (originalPass()) {
+        return res.send(user).status(200);
+      } else {
+        return res.send({
+          message: 'Password is incorrect',
+        });
+      }
+    } else {
+      return res.send({
+        message: 'user is not verified',
+      });
+    }
+  } else {
+    res.status(401).send({ message: 'User not exist' });
+  }
 });
 
 module.exports = userRouter;
