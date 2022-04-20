@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 
-const sendMail = async (email) => {
+const sendMail = async (email, token) => {
 
   // create reusable transporter object using the default SMTP transport
   let transporter = nodemailer.createTransport({
@@ -15,7 +15,7 @@ const sendMail = async (email) => {
     from: 'coolasid123@gmail.com',
     to: email,
     subject: 'Regarding account verification',
-    text: "account verification link",
+    text: `http://localhost:2345/verifyUser/${token}`,
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
