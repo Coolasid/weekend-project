@@ -34,7 +34,13 @@ const updateFields = async (id, updatedValue) => {
   return User.update(updatedValue, { where: { id: id } });
 };
 
+const resetPassword = async(id, newPassword) =>{
+  
+  return User.update({password: newPassword}, {where: {id: id}});
+}
+
 module.exports = {
+  resetPassword,
   addUser,
   getAllUsers,
   deleteUser,

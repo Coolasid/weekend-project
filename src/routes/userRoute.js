@@ -9,6 +9,7 @@ const {
   updateStatusOfUser,
   findByEmail,
   updateFields,
+  resetPassword,
 } = require('../controllers/userController');
 const { sendMail, sendPasswordResetEmail } = require('../utils/sendEmail');
 const { newToken, verifyToken } = require('../utils/jwt');
@@ -48,9 +49,9 @@ userRouter.route('/deleteUser').delete(authorization, async (req, res) => {
         message: 'user deleted',
       });
     } else {
-      throw {
+      return res.send({
         message: 'please provide ID',
-      };
+      });
     }
   } catch (error) {
     throw error;
@@ -74,9 +75,9 @@ userRouter.route('/verifyUser/:token').get(async (req, res) => {
         message: 'user verification completed',
       });
     } else {
-      throw {
+      return res.send({
         message: 'Invalid Link',
-      };
+      });
     }
   } catch (error) {
     throw {
@@ -103,7 +104,7 @@ userRouter.route('/userLogin').post(async (req, res) => {
 
         if (originalPass()) {
           let token = newToken(user);
-          return res.send({user: user, token: token}).status(200);
+          return res.send({ user: user, token: token }).status(200);
         } else {
           return res.send({
             message: 'Password is incorrect',
@@ -133,7 +134,7 @@ userRouter.route('/update').patch(authorization, async (req, res) => {
 
       res.send(updatedUser).status(200);
     } else {
-      throw { message: 'please provide valid information' };
+      return res.send({ message: 'please provide valid information' });
     }
   } catch (error) {
     throw error;
@@ -161,25 +162,37 @@ userRouter.route('/forgetPassword').post(async (req, res) => {
         let email = user.email;
 
         sendPasswordResetEmail(email, token);
-        res.send({ message: 'password reset link send to user email' });
+        return res.send({ message: 'password reset link send to user email' });
       } else {
-        throw { message: 'old password in not correct' };
+        return res.send({ message: 'old password in not correct' });
       }
     } else {
-      throw { message: 'please provide valid information' };
+      return res.send({ message: 'please provide valid information' });
     }
   } catch (error) {
     throw error;
   }
 });
 
-userRouter.route('/resetPassword/:token').get(async (req, res) => {
+userRouter.route('/resetPassword').patch(authorization, async (req, res) => {
   try {
-    let token = req.params.token;
-    if (token) {
-      let user = verifyToken(token);
+    let userID = req.user.id;
+    let user = await findOneUser(userID);
+    let newPassword = req.body.newPassword;
+
+    if (user) {
+
+    const encryptPassword = (pass) => {
+      if (pass) {
+        const hash = bcrypt.hashSync(pass, 10);
+        return hash;
+      }
+    };
+
+      let updatedUser = await resetPassword(userID, encryptPassword(newPassword));
+      return res.send(updatedUser);
     } else {
-      throw { message: 'link is not valid' };
+      return res.send({ message: 'link is not valid' });
     }
   } catch (error) {
     throw error;
