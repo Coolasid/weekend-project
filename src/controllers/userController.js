@@ -6,7 +6,7 @@ const addUser = async (userData) => {
     lastName: userData.lastName,
     email: userData.email,
     password: userData.password,
-    phoneNumber: userData.phoneNumber
+    phoneNumber: userData.phoneNumber,
   });
 };
 
@@ -26,15 +26,13 @@ const updateStatusOfUser = async (id) => {
   return User.update({ isVerified: true }, { where: { id: id } });
 };
 
-const findByEmail = async (email) =>{
-  return User.findOne({where: {email: email}})
-}
+const findByEmail = async (email) => {
+  return User.findOne({ where: { email: email } });
+};
 
-const updateFields = async(id, updatedValue) =>{
-
-  return User.update(updatedValue, {where: {id: id}})
-
-}
+const updateFields = async (id, updatedValue) => {
+  return User.update(updatedValue, { where: { id: id } });
+};
 
 module.exports = {
   addUser,
@@ -43,5 +41,5 @@ module.exports = {
   findOneUser,
   updateStatusOfUser,
   findByEmail,
-  updateFields
+  updateFields,
 };
