@@ -27,6 +27,10 @@ const User = db.define('user', {
     type: Sequelize.STRING,
     allowNull: false,
   },
+  phoneNumber:{
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
   isVerified: {
     type: Sequelize.BOOLEAN,
     allowNull: false,

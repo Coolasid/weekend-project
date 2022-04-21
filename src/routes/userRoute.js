@@ -8,6 +8,7 @@ const {
   findOneUser,
   updateStatusOfUser,
   findByEmail,
+  updateFields,
 } = require('../controllers/userController');
 const sendMail = require('../utils/sendEmail');
 const { newToken, verifyToken } = require('../utils/jwt');
@@ -59,27 +60,23 @@ userRouter.route('/deleteUser/:id').delete(async (req, res) => {
 userRouter.route('/verifyUser/:token').get(async (req, res) => {
   const tokenGotfromAPI = req.params.token;
 
-  if (tokenGotfromAPI) {
-    try {
+  try {
+    if (tokenGotfromAPI) {
       var user = await verifyToken(tokenGotfromAPI);
       const userInDB = await findOneUser(user.user.id);
-
-      // console.log(user);
-      // console.log("-------------------------------");
-      // console.log(userInDB);
 
       //updating status of user
       await updateStatusOfUser(userInDB.id);
 
       return res.send({ message: 'user verification completed' });
-    } catch (error) {
+    }else{
       res.send({
-        message: 'Invalid token',
-      });
+        message: "Invalid Link"
+      })
     }
-  } else {
+  } catch (error) {
     res.send({
-      message: 'invalid link',
+      message: 'Invalid token',
     });
   }
 });
@@ -117,6 +114,11 @@ userRouter.route('/userLogin').post(async (req, res) => {
   } else {
     res.status(401).send({ message: 'User not exist' });
   }
+});
+
+//updating fields
+userRouter.route('/update').patch(async (req, res) => {
+  let updated;
 });
 
 module.exports = userRouter;
