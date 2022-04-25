@@ -1,40 +1,36 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const userRouter = express.Router();
 const {
-  addUser,
+  registerUser,
+  findAllUsers,
   deleteUser,
-  getAllUsers,
-  findOneUser,
-  updateStatusOfUser,
-  findByEmail,
-  updateFields,
+  verifyUser,
+  loginUser,
+  updatingUser,
+  forgetPassword,
+  updatePassword,
   resetPassword,
 } = require('../controllers/userController');
-const { sendMail, sendPasswordResetEmail } = require('../utils/sendEmail');
-const { newToken, verifyToken } = require('../utils/jwt');
+
+const userRouter = express.Router();
+
 const authorization = require('../middlewares/authorization');
 
+//registering user
 userRouter.route('/addUser').post(async (req, res) => {
   try {
-    const user = await addUser(req.body);
-
-    //creating token
-    var token = newToken(user);
-
-    //sending email to verify user
-    sendMail(req.body.email, token);
-
-    res.status(201).send({ user, token });
+    const user = await registerUser(req.body);
+    if(!user) return res.send({message: "user is not created"})
+    return res.send({ user: user.res, token: user.token }).status(201);
   } catch (error) {
     throw error;
   }
 });
 
-userRouter.route('/getAllUsers').get(async (req, res) => {
+userRouter.route('/getAllUsers').get(authorization, async (req, res) => {
   try {
-    const users = await getAllUsers();
-    res.status(200).send(users);
+    const users = await findAllUsers();
+    if(!users) return res.send({message: "users is not fetched"})
+    return res.status(200).send(users.res);
   } catch (error) {
     throw error;
   }
@@ -43,16 +39,12 @@ userRouter.route('/getAllUsers').get(async (req, res) => {
 userRouter.route('/deleteUser').delete(authorization, async (req, res) => {
   try {
     const id = req.user.id;
-    if (id) {
-      const user = await deleteUser(id);
-      res.json({
-        message: 'user deleted',
-      });
-    } else {
-      return res.send({
-        message: 'please provide ID',
-      });
-    }
+    const deletedUser = await deleteUser(id);
+    if(!deleteUser) return res.send({message: "user is not deleted"})
+    return res.send({
+      deletedUser: deletedUser.res,
+      message: deletedUser.message,
+    });
   } catch (error) {
     throw error;
   }
@@ -60,63 +52,29 @@ userRouter.route('/deleteUser').delete(authorization, async (req, res) => {
 
 //verify the user
 userRouter.route('/verifyUser/:token').get(async (req, res) => {
-  const tokenGotfromAPI = req.params.token;
-
   try {
-    if (tokenGotfromAPI) {
-      var user = await verifyToken(tokenGotfromAPI);
-      const userInDB = await findOneUser(user.user.id);
-
-      //updating status of user
-      let newUser = await updateStatusOfUser(userInDB.id);
-
-      return res.send({
-        updatedUser: newUser,
-        message: 'user verification completed',
-      });
-    } else {
-      return res.send({
-        message: 'Invalid Link',
-      });
-    }
+    const token = req.params.token;
+    const verifiedUser = await verifyUser(token);
+    if(!verifiedUser) return res.send({message: "user is not verified"})
+    return res
+      .status(200)
+      .send({ user: verifiedUser.updatedUser, message: verifiedUser.message });
   } catch (error) {
-    throw {
-      message: 'Invalid token',
-    };
+    throw error;
   }
 });
 
 //login route
 userRouter.route('/userLogin').post(async (req, res) => {
-  const email = req.body.email;
-
   try {
-    const user = await findByEmail(email);
-    if (user) {
-      if (user.dataValues.isVerified) {
-        let passwordFromAPI = req.body.password;
-        let hashedPasswordInDB = user.dataValues.password;
-
-        //checking password
-        let originalPass = () => {
-          return bcrypt.compareSync(passwordFromAPI, hashedPasswordInDB);
-        };
-
-        if (originalPass()) {
-          let token = newToken(user);
-          return res.send({ user: user, token: token }).status(200);
-        } else {
-          return res.send({
-            message: 'Password is incorrect',
-          });
-        }
-      } else {
-        return res.send({
-          message: 'user is not verified',
-        });
-      }
+    const email = req.body.email;
+    let password = req.body.password;
+    const user = await loginUser(email, password);
+    if(!loginUser) return res.send({message: "user is not logged In"})
+    if (user.message) {
+      return res.send({ message: user.message });
     } else {
-      return res.send({ message: 'User not exist' });
+      return res.status(200).send({ user: user.user, token: user.token });
     }
   } catch (error) {
     throw error;
@@ -125,17 +83,28 @@ userRouter.route('/userLogin').post(async (req, res) => {
 
 //updating fields
 userRouter.route('/update').patch(authorization, async (req, res) => {
-  let id = req.user.id;
-  let newUser = req.body;
-
   try {
-    if (id && newUser) {
-      let updatedUser = await updateFields(id, newUser);
+    let id = req.user.id;
+    let newUser = req.body;
+    const updatedUser = await updatingUser(id, newUser);
+    if(!updatingUser) return res.send({message: "user is not updated"})
+    return res
+      .status(200)
+      .send({ user: updatedUser.res, message: updatedUser.message });
+  } catch (error) {
+    throw error;
+  }
+});
 
-      res.send(updatedUser).status(200);
-    } else {
-      return res.send({ message: 'please provide valid information' });
-    }
+//update password
+userRouter.route('/updatePassword').post(authorization, async (req, res) => {
+  try {
+    let oldPassword = req.body.oldPassword;
+    let newPassword = req.body.newPassword;
+    let userID = req.user.id;
+    const result = await updatePassword(oldPassword, newPassword, userID);
+    if(!result) return res.send({message: "password is not updated"})
+    return res.send({ message: result.message }).status(200);
   } catch (error) {
     throw error;
   }
@@ -143,32 +112,11 @@ userRouter.route('/update').patch(authorization, async (req, res) => {
 
 //forget password
 userRouter.route('/forgetPassword').post(async (req, res) => {
-  let email = req.body.email;
-  let oldPassword = req.body.oldPassword;
-  let newPassword = req.body.newPassword;
-
   try {
-    if (email && oldPassword && newPassword) {
-      let user = await findByEmail(email);
-      let passInDB = user.dataValues.password;
-
-      let originalPass = () => {
-        return bcrypt.compareSync(oldPassword, passInDB);
-      };
-
-      if (originalPass) {
-        let token = newToken(user);
-
-        let email = user.email;
-
-        sendPasswordResetEmail(email, token);
-        return res.send({ message: 'password reset link send to user email' });
-      } else {
-        return res.send({ message: 'old password in not correct' });
-      }
-    } else {
-      return res.send({ message: 'please provide valid information' });
-    }
+    let email = req.body.email;
+    const result = await forgetPassword(email);
+    if(!result) return res.send({message: "email is not sent"})
+    return res.send({ message: result.message });
   } catch (error) {
     throw error;
   }
@@ -177,23 +125,10 @@ userRouter.route('/forgetPassword').post(async (req, res) => {
 userRouter.route('/resetPassword').patch(authorization, async (req, res) => {
   try {
     let userID = req.user.id;
-    let user = await findOneUser(userID);
     let newPassword = req.body.newPassword;
-
-    if (user) {
-
-    const encryptPassword = (pass) => {
-      if (pass) {
-        const hash = bcrypt.hashSync(pass, 10);
-        return hash;
-      }
-    };
-
-      let updatedUser = await resetPassword(userID, encryptPassword(newPassword));
-      return res.send(updatedUser);
-    } else {
-      return res.send({ message: 'link is not valid' });
-    }
+    const result = await resetPassword(userID, newPassword);
+    if(!result) return res.send({message: "password is not successfully reset"})
+    return res.send({ message: result.message });
   } catch (error) {
     throw error;
   }
